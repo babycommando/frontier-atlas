@@ -1,0 +1,39 @@
+{
+  "id": "arxiv_shards_8_search",
+  "version": 1,
+  "generatedAt": "2026-04-23T04:06:59.241Z",
+  "files": [
+    {
+      "name": "datasets/arxiv_shards_8_search/shard_01_1986_2006.parquet",
+      "url": "/datasets/arxiv_shards_8_search/shard_01_1986_2006.parquet"
+    },
+    {
+      "name": "datasets/arxiv_shards_8_search/shard_02_2007_2012.parquet",
+      "url": "/datasets/arxiv_shards_8_search/shard_02_2007_2012.parquet"
+    },
+    {
+      "name": "datasets/arxiv_shards_8_search/shard_03_2013_2016.parquet",
+      "url": "/datasets/arxiv_shards_8_search/shard_03_2013_2016.parquet"
+    },
+    {
+      "name": "datasets/arxiv_shards_8_search/shard_04_2017_2019.parquet",
+      "url": "/datasets/arxiv_shards_8_search/shard_04_2017_2019.parquet"
+    },
+    {
+      "name": "datasets/arxiv_shards_8_search/shard_05_2020_2021.parquet",
+      "url": "/datasets/arxiv_shards_8_search/shard_05_2020_2021.parquet"
+    },
+    {
+      "name": "datasets/arxiv_shards_8_search/shard_06_2022_2023.parquet",
+      "url": "/datasets/arxiv_shards_8_search/shard_06_2022_2023.parquet"
+    },
+    {
+      "name": "datasets/arxiv_shards_8_search/shard_07_2024.parquet",
+      "url": "/datasets/arxiv_shards_8_search/shard_07_2024.parquet"
+    },
+    {
+      "name": "datasets/arxiv_shards_8_search/shard_08_2025_2026.parquet",
+      "url": "/datasets/arxiv_shards_8_search/shard_08_2025_2026.parquet"
+    }
+  ]
+}
