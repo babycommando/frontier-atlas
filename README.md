@@ -1,40 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+![Alt Text](public/frontier.png) 
 
-## Getting Started
+# Frontier Atlas
+Human knowledge in your fingertips
 
-First, run the development server:
+Dear scientists, the world needs you badly.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### How to run
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. get the data with 
+   python3 arxiv_oai_dashboard.py sync --db data/arxiv.db --checkpoint data/checkpoint.json --history data/history.ndjson --raw-dir data/raw --metadata-prefix arXiv --target-records 3018227 --timeout 300 --max-retries 8 --user-agent "frontier-atlas/0.1 (mailto:you@example.com)"
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+2. clean the data abstracts and more with the go multithread (build and run if necessary)
+   go mod tidy
+   go build -o deabstractor.exe .
+   run the binary over the arxiv.db file from the original
+   .\deabstractor.exe -src arxiv.db -dst arxiv-search.db -workers 32 -batch 250000
+   
+3. then compress it into duckdb zstd parquet files, either with multiple shards as
+	 python .\make_eight_shards.py (outputs a folder)
+	or a single shard as:
+	python .\make_single_shard.py (outputs a parquet file)
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+4. then put the dataset on /public/datasets of the nextjs app.
+   
+5. on the nextjs app, run `yarn install` to install the app
+6. then put the duckdb wasm files at the public if not already there 
+   node .\scripts\copy-duckdb-assets.mjs
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+7. finally build the dataset manifest using `node scripts/build-dataset-manifest.mjs arxiv_shards_8_search` - replace the last part with the real name of your dataset
+8. in duckdb-test-client.tsx, make sure to also change the variable of the dataset name to the dataset in use with `const DATASET_ID = "arxiv_shards_8_search";`
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+9. Clone, install `yarn install` and run the nextjs app `yarn dev` and go to http://localhost:4040/duckdb-test
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+Go further than ever before.

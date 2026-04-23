@@ -843,7 +843,7 @@ export default function HomePage() {
               <span className="pointer-events-none absolute inset-0 z-10 flex gap-3 items-center justify-center text-center text-2xl leading-none font-semibold text-white tracking-tighter whitespace-pre-wrap">
                 Frontier Atlas
                 <p className="text-xs  ">
-                  Explore the edge human of knowledge with ease.
+                  Explore the edge of human knowledge with ease.
                 </p>
               </span>
             </div>
