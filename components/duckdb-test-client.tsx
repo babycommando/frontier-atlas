@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  ensureSearchIndex,
   getDuckDb,
   loadDatasetManifest,
   registerDataset,
@@ -38,9 +37,6 @@ export default function DuckdbTestClient() {
         const db = await getDuckDb();
 
         await registerDataset(db, manifest);
-
-        setStatus("building search index");
-        await ensureSearchIndex(db, manifest);
 
         conn = await db.connect();
 
@@ -99,24 +95,17 @@ export default function DuckdbTestClient() {
       conn = await db.connect();
 
       const files = toSqlFileList(manifest.files.map((f) => f.name));
-      const query = escapeSql(term);
+      const like = `%${escapeSql(term)}%`;
 
       const result = await conn.query(`
-        WITH ranked AS (
-          SELECT
-            id,
-            fts_main_docs_search.match_bm25(
-              id,
-              '${query}'
-            ) AS score
-          FROM docs_search
-        )
-        SELECT p.*
-        FROM read_parquet([${files}]) AS p
-        INNER JOIN ranked r
-          ON p.id = r.id
-        WHERE r.score IS NOT NULL
-        ORDER BY r.score DESC, p.updated_at DESC
+        SELECT *
+        FROM read_parquet([${files}])
+        WHERE
+          LOWER(COALESCE(title, '')) LIKE LOWER('${like}')
+          OR LOWER(COALESCE(abstract, '')) LIKE LOWER('${like}')
+          OR LOWER(COALESCE(authors_text, '')) LIKE LOWER('${like}')
+          OR LOWER(COALESCE(categories_text, '')) LIKE LOWER('${like}')
+        ORDER BY updated_at DESC
         LIMIT 30
       `);
 
@@ -142,7 +131,7 @@ export default function DuckdbTestClient() {
         padding: 24,
         fontFamily: "Inter, Arial, sans-serif",
       }}>
-      <h1 style={{ marginBottom: 12 }}>DuckDB FTS test</h1>
+      <h1 style={{ marginBottom: 12 }}>DuckDB dataset test</h1>
       <p style={{ marginBottom: 8 }}>Dataset: {DATASET_ID}</p>
       <p style={{ marginBottom: 16 }}>Status: {status}</p>
 
@@ -150,14 +139,14 @@ export default function DuckdbTestClient() {
         <pre style={{ whiteSpace: "pre-wrap", color: "#ff8a8a" }}>{error}</pre>
       ) : null}
 
-      <section style={{ marginBottom: 24 }}>
+      <section style={{ marginBottom: 32 }}>
         <h2 style={{ marginBottom: 12 }}>Detected columns</h2>
         <pre style={{ whiteSpace: "pre-wrap" }}>
           {JSON.stringify(columns, null, 2)}
         </pre>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section style={{ marginBottom: 32 }}>
         <h2 style={{ marginBottom: 12 }}>Full text search</h2>
 
         <div
@@ -201,7 +190,7 @@ export default function DuckdbTestClient() {
               cursor: searchLoading || !dbReady ? "default" : "pointer",
               fontWeight: 600,
             }}>
-            {searchLoading ? "Searching..." : "Search"}
+            {searchLoading ? "Searching..." : "Load 30 full objects"}
           </button>
         </div>
 
@@ -211,9 +200,83 @@ export default function DuckdbTestClient() {
           </pre>
         ) : null}
 
-        <pre style={{ whiteSpace: "pre-wrap" }}>
-          {JSON.stringify(searchResults, null, 2)}
-        </pre>
+        <div style={{ display: "grid", gap: 16 }}>
+          {searchResults.map((row, index) => {
+            const id = String(row.id ?? "");
+            const absUrl = id ? `https://arxiv.org/abs/${id}` : "";
+            const pdfUrl = id ? `https://arxiv.org/pdf/${id}.pdf` : "";
+
+            return (
+              <article
+                key={`${id || index}-${index}`}
+                style={{
+                  border: "1px solid #2a2a2a",
+                  borderRadius: 12,
+                  padding: 16,
+                  background: "#0b0b0b",
+                }}>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    marginBottom: 8,
+                    color: "#fff",
+                  }}>
+                  {String(row.title ?? row.id ?? `Result ${index + 1}`)}
+                </div>
+
+                {absUrl ? (
+                  <div style={{ marginBottom: 12, fontSize: 13 }}>
+                    <a
+                      href={absUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: "#9ecbff", marginRight: 12 }}>
+                      abs
+                    </a>
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: "#9ecbff" }}>
+                      pdf
+                    </a>
+                  </div>
+                ) : null}
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  {columns.map((column) => (
+                    <div key={column}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#9a9a9a",
+                          textTransform: "uppercase",
+                          marginBottom: 4,
+                          letterSpacing: 0.5,
+                        }}>
+                        {column}
+                      </div>
+
+                      <pre
+                        style={{
+                          margin: 0,
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          color: "#f5f5f5",
+                          fontFamily:
+                            "ui-monospace, SFMono-Regular, Menlo, monospace",
+                          fontSize: 13,
+                        }}>
+                        {formatValue(row[column])}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
     </main>
   );
@@ -253,6 +316,14 @@ function normalizeValue(value: unknown): unknown {
   }
 
   return value;
+}
+
+function formatValue(value: unknown) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  return JSON.stringify(value, null, 2);
 }
 
 function escapeSql(value: string) {

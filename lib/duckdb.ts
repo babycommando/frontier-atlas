@@ -13,7 +13,6 @@ export type DatasetManifest = {
 };
 
 let dbPromise: Promise<duckdb.AsyncDuckDB> | null = null;
-let bootPromise: Promise<void> | null = null;
 
 export function getDuckDb() {
   if (!dbPromise) {
@@ -70,49 +69,4 @@ export async function registerDataset(
 
 export function toSqlFileList(paths: string[]) {
   return paths.map((p) => `'${p.replaceAll("'", "''")}'`).join(", ");
-}
-
-export async function ensureSearchIndex(
-  db: duckdb.AsyncDuckDB,
-  manifest: DatasetManifest,
-) {
-  if (!bootPromise) {
-    bootPromise = (async () => {
-      const conn = await db.connect();
-
-      try {
-        const files = toSqlFileList(manifest.files.map((f) => f.name));
-
-        await conn.query(`LOAD fts`);
-
-        await conn.query(`
-          CREATE OR REPLACE TEMP TABLE docs_search AS
-          SELECT
-            id,
-            COALESCE(title, '') AS title,
-            COALESCE(abstract, '') AS abstract,
-            COALESCE(authors_text, '') AS authors_text,
-            COALESCE(categories_text, '') AS categories_text,
-            COALESCE(updated_at, published_at) AS updated_at
-          FROM read_parquet([${files}])
-        `);
-
-        await conn.query(`
-          PRAGMA create_fts_index(
-            'docs_search',
-            'id',
-            'title',
-            'abstract',
-            'authors_text',
-            'categories_text',
-            overwrite = 1
-          )
-        `);
-      } finally {
-        await conn.close();
-      }
-    })();
-  }
-
-  await bootPromise;
 }
